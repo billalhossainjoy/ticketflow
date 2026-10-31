@@ -56,3 +56,45 @@ jobs:
             -f apps/api/Dockerfile \
             -t ticketflow-api:ci \
             .
+  publish:
+    name: Publish API image
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+      packages: write
+
+    env:
+      IMAGE: ghcr.io/billalhossainjoy/ticketflow-api
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Build release image
+        run: |
+          docker build \
+            -f apps/api/Dockerfile \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            -t "$IMAGE:$GITHUB_SHA" \
+            .
+
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" |
+            docker login ghcr.io \
+              --username "$GITHUB_ACTOR" \
+              --password-stdin
+
+      - name: Push release image
+        run: docker push "$IMAGE:$GITHUB_SHA"
+
+      - name: Log out of GHCR
+        if: always()
+        run: docker logout ghcr.io
