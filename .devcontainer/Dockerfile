@@ -13,6 +13,10 @@ RUN curl -fsSL https://artifacts-cli.infisical.com/setup.deb.sh \
     && rm -f /tmp/infisical-setup.sh \
     && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gh \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /workspaces/ticketflow
 
 USER node
