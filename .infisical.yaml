@@ -1,4 +1,4 @@
 version: 1
 general: {}
 secrets-management:
-    project-id: e68e0cf2-ae05-416e-a3d4-437246a3c5d9
+  project-id: e68e0cf2-ae05-416e-a3d4-437246a3c5d9

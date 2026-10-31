@@ -6,10 +6,14 @@ ARG PNPM_VERSION=11.25.0
 RUN npm install --global pnpm@${PNPM_VERSION}
 
 RUN curl -fsSL https://artifacts-cli.infisical.com/setup.deb.sh \
-      -o /tmp/infisical-setup.sh \
+        -o /tmp/infisical-setup.sh \
     && bash /tmp/infisical-setup.sh \
     && apt-get update \
-    && apt-get install -y --no-install-recommends infisical \
+    && apt-get install -y --no-install-recommends \
+        gh \
+        infisical \
+    && gh --version \
+    && infisical --version \
     && rm -f /tmp/infisical-setup.sh \
     && rm -rf /var/lib/apt/lists/*
 
