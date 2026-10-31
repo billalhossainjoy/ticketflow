@@ -12,6 +12,7 @@
   "forwardPorts": [3000],
   "customizations": {
     "vscode": {
+      "extensions": ["esbenp.prettier-vscode", "openai.chatgpt", "google.google-antigravity"],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash"
       }
