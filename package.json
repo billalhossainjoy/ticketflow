@@ -1,0 +1,20 @@
+{
+  "name": "ticketflow",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Event ticket booking platform",
+  "type": "module",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test"
+  },
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "devDependencies": {
+    "turbo": "2.11.10"
+  }
+}

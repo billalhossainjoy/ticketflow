@@ -17,3 +17,5 @@ coverage/
 
 # Local credentials
 .secrets/
+
+.pnpm-store/
