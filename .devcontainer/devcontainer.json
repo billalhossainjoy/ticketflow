@@ -1,0 +1,20 @@
+{
+  "name": "TicketFlow Development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "workspaceFolder": "/workspaces/ticketflow",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/ticketflow,type=bind",
+  "remoteUser": "node",
+  "overrideCommand": true,
+  "shutdownAction": "stopContainer",
+  "forwardPorts": [3000],
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  }
+}

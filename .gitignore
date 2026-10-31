@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build and test output
+dist/
+coverage/
+.next/
+.turbo/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Local credentials
+.secrets/
