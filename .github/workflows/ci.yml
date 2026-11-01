@@ -79,6 +79,30 @@ jobs:
             -t ticketflow-api:arm64-check \
             --load \
             .
+      - name: Verify ARM64 API startup
+        run: |
+          docker run -d \
+            --platform linux/arm64 \
+            --name api-arm64-check \
+            -p 127.0.0.1:3001:3000 \
+            ticketflow-api:arm64-check
+
+          curl --fail-with-body \
+            --retry 15 \
+            --retry-all-errors \
+            --retry-connrefused \
+            --retry-delay 2 \
+            --retry-max-time 60 \
+            http://127.0.0.1:3001/health/live
+
+      - name: Show ARM64 container logs
+        if: always()
+        run: docker logs api-arm64-check
+
+      - name: Remove ARM64 test container
+        if: always()
+        run: docker rm -f api-arm64-check
+
   publish:
     name: Publish multi-platform API image
     needs: [verify, verify-arm64]
