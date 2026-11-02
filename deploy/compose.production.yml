@@ -1,0 +1,22 @@
+name: ticketflow
+
+services:
+  api:
+    image: ${TICKETFLOW_API_IMAGE:?Set TICKETFLOW_API_IMAGE}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+    ports:
+      - "127.0.0.1:3000:3000"
+    stop_grace_period: 15s
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health/live').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
