@@ -1,0 +1,112 @@
+name: Deploy API
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Deploy API to home server
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Fetch deployment secrets
+        uses: Infisical/secrets-action@v1.0.9
+        with:
+          method: oidc
+          identity-id: ${{ vars.INFISICAL_IDENTITY_ID }}
+          project-id: ${{ vars.INFISICAL_PROJECT_ID }}
+          oidc-audience: https://app.infisical.com
+          domain: https://app.infisical.com
+          env-slug: prod
+          secret-path: /
+          export-type: env
+          include-imports: false
+          recursive: false
+
+      - name: Check required deployment values
+        shell: bash
+        run: |
+          for name in TS_CLIENT_ID TS_AUDIENCE DEPLOY_SSH_PRIVATE_KEY DEPLOY_SSH_KNOWN_HOSTS; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::$name is missing"
+              exit 1
+            fi
+          done
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ env.TS_CLIENT_ID }}
+          audience: ${{ env.TS_AUDIENCE }}
+          tags: tag:ticketflow-ci
+
+      - name: Prepare SSH files
+        shell: bash
+        run: |
+          umask 077
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > "$RUNNER_TEMP/deploy_key"
+          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > "$RUNNER_TEMP/known_hosts"
+
+      - name: Verify server connection
+        shell: bash
+        run: |
+          ssh \
+            -i "$RUNNER_TEMP/deploy_key" \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
+            -o ConnectTimeout=15 \
+            billal@oparadox \
+            'hostname && whoami && mkdir -p "$HOME/ticketflow"'
+
+      - name: Copy production Compose configuration
+        shell: bash
+        run: |
+          scp \
+            -i "$RUNNER_TEMP/deploy_key" \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
+            -o ConnectTimeout=15 \
+            deploy/compose.production.yml \
+            billal@oparadox:~/ticketflow/compose.production.yml
+
+      - name: Deploy API
+        shell: bash
+        run: |
+          ssh \
+            -i "$RUNNER_TEMP/deploy_key" \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
+            -o ConnectTimeout=15 \
+            billal@oparadox \
+            "bash -s -- '$GITHUB_SHA'" <<'REMOTE'
+          set -euo pipefail
+          cd "$HOME/ticketflow"
+
+          export TICKETFLOW_API_IMAGE="ghcr.io/billalhossainjoy/ticketflow-api:$1"
+
+          docker compose -f compose.production.yml config --quiet
+          docker compose -f compose.production.yml pull api
+          docker compose -f compose.production.yml up -d --wait --wait-timeout 120
+          docker compose -f compose.production.yml ps
+          REMOTE
+
+      - name: Remove SSH files
+        if: always()
+        shell: bash
+        run: |
+          rm -f -- "$RUNNER_TEMP/deploy_key" "$RUNNER_TEMP/known_hosts"
