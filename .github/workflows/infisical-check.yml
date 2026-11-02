@@ -1,0 +1,61 @@
+name: Check Infisical connection
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  check:
+    name: Verify Infisical access
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Inspect OIDC claims
+        shell: python
+        run: |
+          import os, json, base64, urllib.request
+
+          url = os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"]
+          url += "&audience=https%3A%2F%2Fapp.infisical.com"
+          request = urllib.request.Request(url, headers={
+              "Authorization": "Bearer " + os.environ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"]
+          })
+          with urllib.request.urlopen(request) as response:
+              token = json.load(response)["value"]
+
+          payload = token.split(".")[1]
+          claims = json.loads(base64.urlsafe_b64decode(
+              payload + "=" * (-len(payload) % 4)
+          ))
+          for name in ["iss", "aud", "sub", "ref"]:
+              print(f"{name}: {claims.get(name)}")
+
+      - name: Fetch Production secrets
+        uses: Infisical/secrets-action@v1.0.18
+        with:
+          method: oidc
+          identity-id: ${{ vars.INFISICAL_IDENTITY_ID }}
+          project-id: ${{ vars.INFISICAL_PROJECT_ID }}
+          oidc-audience: https://app.infisical.com
+          domain: https://app.infisical.com
+          env-slug: prod
+          secret-path: /
+          export-type: env
+          include-imports: false
+          recursive: false
+
+      - name: Verify required values
+        shell: bash
+        run: |
+          for name in TS_CLIENT_ID TS_AUDIENCE DEPLOY_SSH_PRIVATE_KEY DEPLOY_SSH_KNOWN_HOSTS; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::$name is missing"
+              exit 1
+            fi
+          done
+          echo "Infisical authentication and secret retrieval passed."
