@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Fetch deployment secrets
-        uses: Infisical/secrets-action@v1.0.9
+        uses: Infisical/secrets-action@v1.0.18
         with:
           method: oidc
           identity-id: ${{ vars.INFISICAL_IDENTITY_ID }}
