@@ -95,3 +95,13 @@ Fix configuration failures and retry the failed job.
 
 If application code is faulty, merge a fix or revert through a pull request.
 Automatic rollback is not currently implemented.
+
+## Documentation-only changes
+
+Verification runs for every pull request and push to main.
+
+Changes limited to `docs/`, `README.md`, `CONTRIBUTING.md`, and
+`CHANGELOG.md` skip image publishing and deployment.
+
+Changes outside those paths trigger publishing and deployment
+after verification succeeds.
