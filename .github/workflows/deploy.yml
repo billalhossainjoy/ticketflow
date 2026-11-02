@@ -35,7 +35,7 @@ jobs:
       - name: Check required deployment values
         shell: bash
         run: |
-          for name in TS_CLIENT_ID TS_AUDIENCE DEPLOY_SSH_PRIVATE_KEY DEPLOY_SSH_KNOWN_HOSTS; do
+          for name in TS_CLIENT_ID TS_AUDIENCE DEPLOY_SSH_PRIVATE_KEY DEPLOY_SSH_KNOWN_HOSTS CLOUDFLARE_TUNNEL_TOKEN; do
             if [ -z "${!name:-}" ]; then
               echo "::error::$name is missing"
               exit 1
@@ -81,6 +81,20 @@ jobs:
             -o ConnectTimeout=15 \
             deploy/compose.production.yml \
             billal@oparadox:~/ticketflow/compose.production.yml
+
+      - name: Transfer tunnel environment
+        shell: bash
+        run: |
+          printf 'CLOUDFLARE_TUNNEL_TOKEN=%s\n' "$CLOUDFLARE_TUNNEL_TOKEN" |
+            ssh \
+              -i "$RUNNER_TEMP/deploy_key" \
+              -o IdentitiesOnly=yes \
+              -o BatchMode=yes \
+              -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
+              -o ConnectTimeout=15 \
+              billal@oparadox \
+              'umask 077; cat > "$HOME/ticketflow/.env.tmp" && mv "$HOME/ticketflow/.env.tmp" "$HOME/ticketflow/.env"'
 
       - name: Deploy API
         shell: bash
