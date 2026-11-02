@@ -9,146 +9,30 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 jobs:
   verify:
-    name: Typecheck, test, and build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v6
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Check formatting
-        run: pnpm format:check
-
-      - name: Check types
-        run: pnpm typecheck
-
-      - name: Run tests
-        run: pnpm test
-
-      - name: Build
-        run: pnpm build
-
-      - name: Build API Docker image
-        run: |
-          docker build \
-            -f apps/api/Dockerfile \
-            -t ticketflow-api:ci \
-            .
-  verify-arm64:
-    name: Verify ARM64 API image
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v6
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Build ARM64 image
-        run: |
-          docker buildx build \
-            --platform linux/arm64 \
-            -f apps/api/Dockerfile \
-            -t ticketflow-api:arm64-check \
-            --load \
-            .
-      - name: Verify ARM64 API startup
-        run: |
-          docker run -d \
-            --platform linux/arm64 \
-            --name api-arm64-check \
-            -p 127.0.0.1:3001:3000 \
-            ticketflow-api:arm64-check
-
-          curl --fail-with-body \
-            --retry 15 \
-            --retry-all-errors \
-            --retry-connrefused \
-            --retry-delay 2 \
-            --retry-max-time 60 \
-            http://127.0.0.1:3001/health/live
-
-      - name: Show ARM64 container logs
-        if: always()
-        run: docker logs api-arm64-check
-
-      - name: Remove ARM64 test container
-        if: always()
-        run: docker rm -f api-arm64-check
+    name: Verify
+    uses: ./.github/workflows/verify.yml
 
   publish:
-    name: Publish multi-platform API image
-    needs: [verify, verify-arm64]
+    name: Publish
+    needs: verify
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
     permissions:
       contents: read
       packages: write
+    uses: ./.github/workflows/publish.yml
 
-    env:
-      IMAGE: ghcr.io/billalhossainjoy/ticketflow-api
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v6
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-        with:
-          platforms: arm64
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to GHCR
-        env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          printf '%s' "$GHCR_TOKEN" |
-            docker login ghcr.io \
-              --username "$GITHUB_ACTOR" \
-              --password-stdin
-
-      - name: Build and push release image
-        run: |
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            -f apps/api/Dockerfile \
-            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
-            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
-            -t "$IMAGE:$GITHUB_SHA" \
-            --push \
-            .
-
-      - name: Log out of GHCR
-        if: always()
-        run: docker logout ghcr.io
+  deploy:
+    name: Deploy
+    needs: publish
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy.yml
