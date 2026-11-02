@@ -9,6 +9,8 @@ services:
       PORT: "3000"
     ports:
       - "127.0.0.1:3000:3000"
+    networks:
+      - app
     stop_grace_period: 15s
     healthcheck:
       test:
@@ -20,3 +22,19 @@ services:
       timeout: 5s
       start_period: 10s
       retries: 3
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - app
+    depends_on:
+      api:
+        condition: service_healthy
+
+networks:
+  app:
+    driver: bridge
