@@ -26,8 +26,11 @@ jobs:
 
   publish:
     name: Publish
-    needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [verify, changes]
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.release == 'true'
     permissions:
       contents: read
       packages: write
