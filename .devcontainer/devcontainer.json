@@ -1,18 +1,20 @@
 {
   "name": "TicketFlow Development",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".."
-  },
+  "dockerComposeFile": "compose.yml",
+  "service": "workspace",
   "workspaceFolder": "/workspaces/ticketflow",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/ticketflow,type=bind",
   "remoteUser": "node",
-  "overrideCommand": true,
-  "shutdownAction": "stopContainer",
+  "shutdownAction": "stopCompose",
   "forwardPorts": [3000],
   "customizations": {
     "vscode": {
-      "extensions": ["esbenp.prettier-vscode", "openai.chatgpt", "google.google-antigravity"],
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "openai.chatgpt",
+        "google.google-antigravity",
+        "GitHub.vscode-pull-request-github",
+        "github.vscode-github-actions"
+      ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash"
       }
