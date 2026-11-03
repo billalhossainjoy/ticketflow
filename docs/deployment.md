@@ -21,7 +21,8 @@ can be traced to its source revision.
 | `.github/workflows/deploy.yml`          | Fetch secrets, connect to the server, and deploy  |
 | `.github/workflows/infisical-check.yml` | Manually diagnose Infisical authentication        |
 
-Pull requests run verification. Pushes to `main` also publish and deploy.
+Pull requests run verification. Pushes to `main` publish and deploy
+only when change detection finds changes outside the documentation paths.
 
 ## Runtime configuration
 
