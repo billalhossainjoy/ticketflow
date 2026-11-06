@@ -81,6 +81,9 @@ jobs:
             --platform linux/arm64 \
             --name api-arm64-check \
             -p 127.0.0.1:3001:3000 \
+            -e DATABASE_URL=postgresql://test:test@127.0.0.1:1/ticketflow_ci \
+            -e BETTER_AUTH_SECRET=ticketflow-arm64-ci-only-secret-0123456789 \
+            -e BETTER_AUTH_URL=http://localhost:3000 \
             ticketflow-api:arm64-check
 
           curl --fail-with-body \

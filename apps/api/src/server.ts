@@ -1,5 +1,6 @@
 import { app } from "./app.js";
 import { env } from "./platform/config/env.js";
+import { closeDatabaseConnections } from "./platform/database/lifecycle.js";
 import { logger } from "./platform/logging/logger.js";
 
 const server = app.listen(env.PORT, "0.0.0.0", () => {
@@ -13,7 +14,7 @@ server.on("error", (error) => {
 
 let shuttingDown = false;
 
-function shutdown(signal: string): void {
+async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
 
@@ -26,18 +27,40 @@ function shutdown(signal: string): void {
 
   deadline.unref();
 
-  server.close((error) => {
-    clearTimeout(deadline);
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
 
-    if (error) {
-      logger.error({ err: error }, "HTTP server shutdown failed");
-      process.exitCode = 1;
-      return;
-    }
+        resolve();
+      });
+    });
 
     logger.info("HTTP server closed");
-  });
+  } catch (error) {
+    logger.error({ err: error }, "HTTP server shutdown failed");
+    process.exitCode = 1;
+  }
+
+  try {
+    await closeDatabaseConnections();
+
+    logger.info("Database cleanup completed");
+  } catch (error) {
+    logger.error({ err: error }, "Database shutdown failed");
+    process.exitCode = 1;
+  } finally {
+    clearTimeout(deadline);
+  }
 }
 
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => {
+  void shutdown("SIGTERM");
+});
+
+process.on("SIGINT", () => {
+  void shutdown("SIGINT");
+});
