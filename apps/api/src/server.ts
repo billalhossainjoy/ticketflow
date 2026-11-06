@@ -1,12 +1,13 @@
 import { app } from "./app.js";
 import { env } from "./platform/config/env.js";
+import { logger } from "./platform/logging/logger.js";
 
 const server = app.listen(env.PORT, "0.0.0.0", () => {
-  console.log(`TicketFlow API listening on port ${env.PORT}`);
+  logger.info({ port: env.PORT }, "API listening");
 });
 
 server.on("error", (error) => {
-  console.error("API failed to listen:", error.message);
+  logger.fatal({ err: error }, "API failed to listen");
   process.exit(1);
 });
 
@@ -16,10 +17,10 @@ function shutdown(signal: string): void {
   if (shuttingDown) return;
   shuttingDown = true;
 
-  console.log(`Received ${signal}; shutting down`);
+  logger.info({ signal }, "Shutting down API");
 
   const deadline = setTimeout(() => {
-    console.error("Shutdown deadline exceeded");
+    logger.fatal("Shutdown deadline exceeded");
     process.exit(1);
   }, 10_000);
 
@@ -29,12 +30,12 @@ function shutdown(signal: string): void {
     clearTimeout(deadline);
 
     if (error) {
-      console.error("Shutdown failed:", error.message);
+      logger.error({ err: error }, "HTTP server shutdown failed");
       process.exitCode = 1;
       return;
     }
 
-    console.log("HTTP server closed");
+    logger.info("HTTP server closed");
   });
 }
 
