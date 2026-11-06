@@ -19,6 +19,9 @@ const envSchema = z
         "Must be a PostgreSQL connection URL",
       )
       .optional(),
+
+    BETTER_AUTH_SECRET: z.string().min(32).optional(),
+    BETTER_AUTH_URL: z.url().optional(),
   })
   .transform((config) => ({
     ...config,
