@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+:root {
+  --page-bg: #faf9fc;
+  --brand: #7338c7;
+  --brand-soft: #f1e9fb;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; }
+button, input { font: inherit; }
+button { cursor: pointer; }
